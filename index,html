@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus & Scholar: Battle of Wits</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(circle at center, #1e293b, #0f172a);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+        }
+
+        .btn-action {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.5);
+        }
+
+        .timer-bar {
+            transition: width 0.1s linear;
+        }
+
+        .character-locked {
+            filter: grayscale(1) brightness(0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .anim-pulse { animation: pulse 1s infinite; }
+    </style>
+</head>
+<body class="flex items-center justify-center p-4">
+
+    <!-- Kontainer Utama -->
+    <div id="game-container" class="w-full max-w-4xl h-[600px] glass-card p-8 flex flex-col relative overflow-hidden">
+        
+        <!-- Layar Instruksi / Welcome -->
+        <div id="screen-welcome" class="absolute inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center p-10 text-center">
+            <h1 class="text-4xl font-extrabold mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">FOCUS & SCHOLAR</h1>
+            <div class="space-y-4 mb-8 text-slate-300">
+                <p class="text-lg">Selamat datang pejuang ilmu! Siapkan fokusmu.</p>
+                <ul class="text-sm space-y-2 text-left bg-slate-800/50 p-6 rounded-xl border border-slate-700">
+                    <li>🎯 <strong>4 Pemain:</strong> Maksimal 4 orang bisa bertarung.</li>
+                    <li>⏱️ <strong>40 Detik:</strong> Selesaikan 4 Level dalam waktu terbatas.</li>
+                    <li>📚 <strong>Materi:</strong> Soal SMA & Kosakata sulit menantimu.</li>
+                    <li>💰 <strong>Reward:</strong> Kumpulkan koin untuk beli karakter keren!</li>
+                </ul>
+            </div>
+            <button onclick="showPlayerSelection()" class="btn-action bg-blue-600 px-8 py-3 rounded-full font-bold text-white text-xl">Mulai Petualangan</button>
+        </div>
+
+        <!-- Pemilihan Pemain -->
+        <div id="screen-players" class="hidden flex flex-col items-center justify-center h-full">
+            <h2 class="text-2xl font-bold mb-8">Berapa banyak pemain?</h2>
+            <div class="flex gap-4">
+                <button onclick="initGame(1)" class="btn-action bg-slate-700 w-16 h-16 rounded-2xl text-2xl font-bold">1</button>
+                <button onclick="initGame(2)" class="btn-action bg-slate-700 w-16 h-16 rounded-2xl text-2xl font-bold">2</button>
+                <button onclick="initGame(3)" class="btn-action bg-slate-700 w-16 h-16 rounded-2xl text-2xl font-bold">3</button>
+                <button onclick="initGame(4)" class="btn-action bg-slate-700 w-16 h-16 rounded-2xl text-2xl font-bold">4</button>
+            </div>
+        </div>
+
+        <!-- Area Gameplay -->
+        <div id="screen-game" class="hidden flex flex-col h-full">
+            <!-- Header Info -->
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <p class="text-xs text-slate-400 uppercase tracking-widest">Pemain Sekarang</p>
+                    <h3 id="current-player-name" class="text-xl font-bold text-blue-400">Pemain 1</h3>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs text-slate-400 uppercase tracking-widest">Level</p>
+                    <h3 id="current-level" class="text-xl font-bold">1/4</h3>
+                </div>
+            </div>
+
+            <!-- Timer -->
+            <div class="w-full h-3 bg-slate-800 rounded-full mb-8 overflow-hidden">
+                <div id="timer-bar" class="h-full bg-gradient-to-r from-green-400 to-blue-500 w-full timer-bar"></div>
+            </div>
+
+            <!-- Soal Area -->
+            <div id="question-box" class="flex-grow flex flex-col items-center justify-center text-center p-4">
+                <p id="question-text" class="text-2xl font-medium mb-8 leading-relaxed">Pertanyaan akan muncul di sini?</p>
+                <div id="options-grid" class="grid grid-cols-2 gap-4 w-full max-w-lg">
+                    <!-- Tombol Opsi -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Layar Hasil -->
+        <div id="screen-result" class="hidden absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center p-8">
+            <h2 class="text-3xl font-bold mb-2">Permainan Selesai!</h2>
+            <p id="final-score" class="text-xl text-yellow-400 mb-6 font-bold">Skor: 0</p>
+            
+            <div id="leaderboard" class="w-full max-w-sm mb-8 space-y-2">
+                <!-- Leaderboard content -->
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="showShop()" class="btn-action bg-yellow-600 px-6 py-2 rounded-lg font-semibold">Toko Karakter</button>
+                <button onclick="location.reload()" class="btn-action bg-slate-700 px-6 py-2 rounded-lg font-semibold">Main Lagi</button>
+            </div>
+        </div>
+
+        <!-- Layar Toko -->
+        <div id="screen-shop" class="hidden absolute inset-0 bg-slate-900 flex flex-col p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Toko Karakter</h2>
+                <div class="bg-yellow-500/20 px-4 py-1 rounded-full border border-yellow-500 text-yellow-500 font-bold">
+                    💰 <span id="shop-coins">0</span>
+                </div>
+            </div>
+            <div id="shop-grid" class="grid grid-cols-3 gap-4 flex-grow overflow-y-auto">
+                <!-- Items -->
+            </div>
+            <button onclick="closeShop()" class="mt-4 bg-slate-700 py-2 rounded-lg">Kembali</button>
+        </div>
+
+    </div>
+
+    <script>
+        // DATA GAME
+        const questions = [
+            // Level 1: Kosakata Sulit
+            { q: "Apa arti kata 'Anomali'?", options: ["Penyimpangan", "Persamaan", "Kekuatan", "Ketenangan"], a: 0, lvl: 1 },
+            { q: "Apa arti kata 'Efemer'?", options: ["Abadi", "Sangat kuat", "Hanya sesaat", "Rahasia"], a: 2, lvl: 1 },
+            { q: "Apa sinonim dari 'Apatis'?", options: ["Peduli", "Acuh tak acuh", "Sangat marah", "Cepat"], a: 1, lvl: 1 },
+            
+            // Level 2: Materi SMA - Biologi/Kimia
+            { q: "Organel sel yang berfungsi sebagai tempat respirasi adalah?", options: ["Ribosom", "Lisosom", "Mitokondria", "Nukleus"], a: 2, lvl: 2 },
+            { q: "Unsur kimia dengan lambang 'Au' adalah?", options: ["Perak", "Emas", "Tembaga", "Aluminium"], a: 1, lvl: 2 },
+            
+            // Level 3: Materi SMA - Fisika/Matematika
+            { q: "Satuan gaya dalam SI adalah?", options: ["Joule", "Watt", "Newton", "Pascal"], a: 2, lvl: 3 },
+            { q: "Turunan pertama dari f(x) = x² adalah?", options: ["2", "2x", "x", "x²"], a: 1, lvl: 3 },
+            
+            // Level 4: Fokus & Logika
+            { q: "Jika 'MERAH' ditulis 'HAREM', maka 'BUTA' ditulis?", options: ["ATUB", "TUBA", "ABUT", "TAUB"], a: 0, lvl: 4 },
+            { q: "Manakah yang paling berat?", options: ["1kg Kapas", "1kg Besi", "Sama Berat", "1kg Pasir"], a: 2, lvl: 4 }
+        ];
+
+        const shopItems = [
+            { id: 1, name: "Si Jenius", price: 50, icon: "🎓" },
+            { id: 2, name: "Si Fokus", price: 100, icon: "🧘" },
+            { id: 3, name: "Si Kilat", price: 200, icon: "⚡" },
+            { id: 4, name: "Professor", price: 500, icon: "👨‍🏫" }
+        ];
+
+        // STATE GAME
+        let totalPlayers = 1;
+        let currentPlayerIndex = 0;
+        let playerScores = [];
+        let timer = 40;
+        let gameActive = false;
+        let currentLevel = 1;
+        let coins = parseInt(localStorage.getItem('game_coins')) || 0;
+        let unlockedSkins = JSON.parse(localStorage.getItem('unlocked_skins')) || [0];
+        let timerInterval;
+        let currentQuestionIndex = 0;
+
+        // AUDIO SYSTEM (Sintetis)
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playBGM() {
+            // Loop nada sederhana
+            setInterval(() => {
+                if(gameActive) playTone(220, 'sine', 0.5);
+            }, 1000);
+        }
+
+        // FUNGSI NAVIGASI
+        function showPlayerSelection() {
+            document.getElementById('screen-welcome').classList.add('hidden');
+            document.getElementById('screen-players').classList.remove('hidden');
+            audioCtx.resume();
+        }
+
+        function initGame(num) {
+            totalPlayers = num;
+            playerScores = Array(num).fill(0);
+            currentPlayerIndex = 0;
+            document.getElementById('screen-players').classList.add('hidden');
+            startPlayerTurn();
+        }
+
+        function startPlayerTurn() {
+            timer = 40;
+            currentLevel = 1;
+            currentQuestionIndex = 0;
+            gameActive = true;
+            
+            document.getElementById('screen-game').classList.remove('hidden');
+            document.getElementById('current-player-name').innerText = `Pemain ${currentPlayerIndex + 1}`;
+            updateQuestion();
+            startTimer();
+        }
+
+        function startTimer() {
+            const bar = document.getElementById('timer-bar');
+            clearInterval(timerInterval);
+            
+            timerInterval = setInterval(() => {
+                timer -= 0.1;
+                const percentage = (timer / 40) * 100;
+                bar.style.width = percentage + "%";
+
+                // Logic Level (4 level dlm 40 detik = 10 detik per level)
+                if (timer > 30) currentLevel = 1;
+                else if (timer > 20) currentLevel = 2;
+                else if (timer > 10) currentLevel = 3;
+                else if (timer > 0) currentLevel = 4;
+                
+                document.getElementById('current-level').innerText = `${currentLevel}/4`;
+
+                if (timer <= 0) {
+                    endTurn();
+                }
+            }, 100);
+        }
+
+        function updateQuestion() {
+            // Filter soal sesuai level saat ini
+            const levelQuestions = questions.filter(q => q.lvl === currentLevel);
+            const randomQ = levelQuestions[Math.floor(Math.random() * levelQuestions.length)];
+            
+            document.getElementById('question-text').innerText = randomQ.q;
+            const grid = document.getElementById('options-grid');
+            grid.innerHTML = '';
+
+            randomQ.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = "btn-action bg-slate-800 p-4 rounded-xl border border-slate-700 hover:bg-slate-700 text-lg";
+                btn.innerText = opt;
+                btn.onclick = () => checkAnswer(index, randomQ.a);
+                grid.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(selected, correct) {
+            if (selected === correct) {
+                playerScores[currentPlayerIndex] += 10;
+                playTone(660, 'square', 0.1);
+                // Beri koin sedikit per jawaban
+                coins += 2;
+                saveData();
+            } else {
+                playTone(150, 'sawtooth', 0.2);
+                timer -= 2; // Penalti waktu jika salah
+            }
+            updateQuestion();
+        }
+
+        function endTurn() {
+            clearInterval(timerInterval);
+            gameActive = false;
+            
+            if (currentPlayerIndex < totalPlayers - 1) {
+                currentPlayerIndex++;
+                // Beri jeda sebentar
+                setTimeout(() => {
+                    alert(`Giliran Selesai! Sekarang Pemain ${currentPlayerIndex + 1}`);
+                    startPlayerTurn();
+                }, 500);
+            } else {
+                showResults();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-result').classList.remove('hidden');
+            
+            const lb = document.getElementById('leaderboard');
+            lb.innerHTML = '<h3 class="text-center font-bold mb-4">Papan Skor</h3>';
+            
+            playerScores.forEach((score, i) => {
+                const row = document.createElement('div');
+                row.className = "flex justify-between bg-slate-800 p-3 rounded-lg";
+                row.innerHTML = `<span>Pemain ${i+1}</span> <span class="font-bold text-blue-400">${score}</span>`;
+                lb.appendChild(row);
+            });
+
+            const winnerIndex = playerScores.indexOf(Math.max(...playerScores));
+            document.getElementById('final-score').innerText = `Pemenang: Pemain ${winnerIndex + 1}!`;
+            
+            // Bonus Koin untuk pemenang
+            coins += 50;
+            saveData();
+        }
+
+        // TOKO
+        function showShop() {
+            document.getElementById('screen-shop').classList.remove('hidden');
+            document.getElementById('shop-coins').innerText = coins;
+            renderShop();
+        }
+
+        function renderShop() {
+            const grid = document.getElementById('shop-grid');
+            grid.innerHTML = '';
+            shopItems.forEach(item => {
+                const isUnlocked = unlockedSkins.includes(item.id);
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-xl flex flex-col items-center ${isUnlocked ? 'bg-green-900/20 border-green-500' : 'bg-slate-800 border-slate-700'} border`;
+                card.innerHTML = `
+                    <div class="text-4xl mb-2">${item.icon}</div>
+                    <div class="text-sm font-bold">${item.name}</div>
+                    <div class="text-xs text-yellow-500 mb-2">${isUnlocked ? 'Terbuka' : '💰 ' + item.price}</div>
+                    ${!isUnlocked ? `<button onclick="buyItem(${item.id}, ${item.price})" class="bg-blue-600 text-xs px-3 py-1 rounded-full">Beli</button>` : ''}
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function buyItem(id, price) {
+            if (coins >= price) {
+                coins -= price;
+                unlockedSkins.push(id);
+                saveData();
+                showShop();
+                playTone(880, 'sine', 0.3);
+            } else {
+                alert("Koin tidak cukup!");
+            }
+        }
+
+        function closeShop() {
+            document.getElementById('screen-shop').classList.add('hidden');
+        }
+
+        function saveData() {
+            localStorage.setItem('game_coins', coins);
+            localStorage.setItem('unlocked_skins', JSON.stringify(unlockedSkins));
+        }
+
+        // Jalankan BGM
+        playBGM();
+
+    </script>
+</body>
+</html>
